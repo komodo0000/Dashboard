@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gatos por Cor</title>
+<style>
+:root{box-sizing:border-box;--bg:#f7f1ed;--card:#fff;--tx:#8a4f4f;--soft:#faf2ee;--bad:#e5484d;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#241d1d;--card:#332a2a;--tx:#f0c9c9;--soft:#3d3232}}
+*{box-sizing:border-box}html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;padding:14px;gap:12px}
+.top{display:flex;gap:36px;text-align:center;font-weight:700}
+.top small{display:block;font-size:15px;opacity:.85}.top b{font-size:30px}
+.card{background:var(--card);border-radius:18px;padding:8px 10px;width:100%;max-width:440px}
+#cats{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:15px;opacity:.45;transition:.2s}
+.dot.on{opacity:1}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:12px;text-align:center}
+.rules div{background:var(--soft);border-radius:10px;padding:6px 4px}
+#board{display:grid;gap:3px;width:100%;max-width:440px;aspect-ratio:1;background:var(--card);padding:8px;border-radius:18px}
+.c{border-radius:7px;display:grid;place-items:center;font-size:clamp(14px,6vw,30px);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;position:relative;color:#5b3a3a}
+.c.bad{outline:3px solid var(--bad);outline-offset:-3px}
+.c.hint{animation:p 1s 2}@keyframes p{50%{transform:scale(.8)}}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:10px 16px;background:var(--card);color:var(--tx);cursor:pointer}
+#levels{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:440px}
+#levels button{padding:6px 0;width:34px;border-radius:10px;font-size:13px}
+#levels button.cur{background:var(--tx);color:var(--bg)}
+#levels button.done::after{content:"✓";font-size:10px;margin-left:1px}
+#win{display:none;text-align:center;font-weight:700;font-size:18px}
+#win.show{display:block}
+#msg{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);width:max-content;max-width:90%;padding:12px 18px;border-radius:14px;font-weight:700;text-align:center;z-index:5;display:none;background:var(--tx);color:var(--bg);box-shadow:0 6px 20px #0004}#msg.show{display:block}#msg.win{background:#3aa66b;color:#fff;font-size:20px}#msg.lose{background:var(--bad);color:#fff;font-size:18px}#msg.warn{background:var(--bad);color:#fff}.shake{animation:s .4s}@keyframes s{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}#lives{font-size:26px;letter-spacing:2px;line-height:1.3}#hint{background:#ffd966;color:#5b3a3a}
+</style></head><body>
+<div class="top" style="gap:24px"><div><small>Nível</small><b id="lv">1</b></div><div><small>Vidas</small><span id="lives"></span></div><div><small>Jogadas</small><b id="mv">0</b></div></div>
+<div class="card" id="cats"></div>
+<div class="card rules"><div>🎨 1 gato por cor</div><div>↔️ 1 gato por linha e coluna</div><div>🚫 Gatos não podem se tocar</div></div>
+<div id="board"></div>
+<div id="msg"></div>
+<div class="btns"><button id="hint">💡 Dica</button><button id="clear">🧹 Limpar</button><button id="undo">↩️ Desfazer</button></div>
+<div id="levels"></div>
+<small>Toque: vazio → ✕ → 🐱</small>
+<script>
+const COLORS=["#f9b4d0","#47b3b0","#5a74b5","#e3bb48","#ad6e48","#9a7ad8","#ffaa6a","#ea85b5","#a8c0dc","#aed891"];
+const SIZES=[5,5,6,6,7,7,8,8,9,10];
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function count(n,reg,lim){let cols=Array(n).fill(0),used=Array(n).fill(0),k=0;
+ (function go(r,prev){if(k>=lim)return;if(r===n){k++;return}
+  for(let c=0;c<n;c++){if(cols[c]||used[reg[r][c]]||(r&&Math.abs(c-prev)<2))continue;
+   cols[c]=used[reg[r][c]]=1;go(r+1,c);cols[c]=used[reg[r][c]]=0}})(0,-9);return k}
+function gen(n,seed){const R=rng(seed*7919+n);let best=null;
+ for(let a=0;a<3000;a++){
+  let q=[];(function place(r){if(r===n)return true;
+   const o=[...Array(n).keys()].sort(()=>R()-.5);
+   for(const c of o){if(q.includes(c)||(r&&Math.abs(c-q[r-1])<2))continue;q[r]=c;if(place(r+1))return true;q.length=r}return false})(0);
+  const reg=Array.from({length:n},()=>Array(n).fill(-1));q.forEach((c,r)=>reg[r][c]=r);
+  let left=n*n-n;
+  while(left){const cand=[];
+   for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(reg[r][c]<0)for(const[d,e]of[[1,0],[-1,0],[0,1],[0,-1]]){const y=r+d,x=c+e;if(y>=0&&x>=0&&y<n&&x<n&&reg[y][x]>=0)cand.push([r,c,reg[y][x]])}
+   const[r,c,g]=cand[Math.floor(R()*cand.length)];reg[r][c]=g;left--}
+  best={reg,sol:q};if(count(n,reg,2)===1)return best}
+ return best}
+const LV=SIZES.map((n,i)=>gen(n,i+1));
+let cur=0,n,reg,sol,m,hist,moves,lives=3,locked=false,doneSet=new Set();
+const $=id=>document.getElementById(id);
+let mt;function showMsg(h,k,ms){clearTimeout(mt);const e=$("msg");e.innerHTML=h;e.className=h?"show "+k:"";if(ms)mt=setTimeout(()=>e.className="",ms)}
+function drawLives(){$("lives").textContent="❤️".repeat(lives)+"🖤".repeat(3-lives)}
+function load(i){cur=i;({reg,sol}=LV[i]);n=SIZES[i];m=Array.from({length:n},()=>Array(n).fill(0));hist=[];moves=0;lives=3;locked=false;showMsg("");drawLives();
+ const b=$("board");b.style.gridTemplateColumns=`repeat(${n},1fr)`;b.innerHTML="";
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++){const d=document.createElement("div");d.className="c";d.id=`c${r}_${c}`;d.style.background=COLORS[reg[r][c]];d.onclick=()=>tap(r,c);b.appendChild(d)}
+ $("cats").innerHTML=Array.from({length:n},(_,g)=>`<div class="dot" id="d${g}" style="background:${COLORS[g]}"></div>`).join("");
+ $("lv").textContent=i+1;render();lvlbar()}
+function lvlbar(){$("levels").innerHTML="";LV.forEach((_,i)=>{const b=document.createElement("button");b.textContent=i+1;b.className=(i===cur?"cur ":"")+(doneSet.has(i)?"done":"");b.onclick=()=>load(i);$("levels").appendChild(b)})}
+function why(r,c){for(let x=0;x<n;x++)for(let y=0;y<n;y++){if(m[x][y]!==2||(x===r&&y===c))continue;if(x===r)return"Já existe um gato nessa linha";if(y===c)return"Já existe um gato nessa coluna";if(reg[x][y]===reg[r][c])return"Essa cor já tem um gato";if(Math.abs(x-r)<2&&Math.abs(y-c)<2)return"Gatos não podem se tocar"}return""}
+function tap(r,c){if(locked)return;const old=m[r][c],nw=(old+1)%3;
+ if(nw===2){const w=why(r,c);if(w){hist.push([r,c,old]);m[r][c]=1;moves++;lives--;drawLives();render();const e=$(`c${r}_${c}`);e.classList.add("shake");setTimeout(()=>e.classList.remove("shake"),500);
+  if(lives<=0){locked=true;showMsg("💔 Você perdeu as 3 vidas!<br><small>Reiniciando o nível…</small>","lose");setTimeout(()=>load(cur),2200)}else showMsg("❌ Errou! "+w+".<br>Vidas restantes: "+lives,"warn",2500);return}}
+ hist.push([r,c,old]);m[r][c]=nw;moves++;render()}
+function render(){const bad=Array.from({length:n},()=>Array(n).fill(0)),cats=[];
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(m[r][c]===2)cats.push([r,c]);
+ for(const[a,b]of cats)for(const[x,y]of cats){if(a===x&&b===y)continue;
+  if(a===x||b===y||reg[a][b]===reg[x][y]||(Math.abs(a-x)<2&&Math.abs(b-y)<2))bad[a][b]=1}
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++){const e=$(`c${r}_${c}`);e.textContent=m[r][c]===1?"✕":m[r][c]===2?"🐱":"";e.classList.toggle("bad",!!bad[r][c])}
+ const has=new Set(cats.map(([r,c])=>reg[r][c]));for(let g=0;g<n;g++){const d=$("d"+g);d.classList.toggle("on",has.has(g));d.textContent=has.has(g)?"🐱":""}
+ $("mv").textContent=moves;
+ const ok=cats.length===n&&!bad.some(r=>r.includes(1));
+ if(ok&&!locked){locked=true;doneSet.add(cur);lvlbar();const last=cur>=LV.length-1;showMsg(last?"🏆 Você ganhou todos os níveis!":"🎉 Você ganhou!<br><small>Indo para o próximo nível…</small>","win");if(!last)setTimeout(()=>load(cur+1),2000)}}
+$("clear").onclick=()=>{if(locked)return;m=Array.from({length:n},()=>Array(n).fill(0));hist=[];render()};
+$("undo").onclick=()=>{if(locked)return;const h=hist.pop();if(h){m[h[0]][h[1]]=h[2];moves=Math.max(0,moves-1);render()}};
+$("hint").onclick=()=>{if(locked)return;
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(m[r][c]===2&&sol[r]!==c){m[r][c]=0;render();showMsg("💡 O gato da linha "+(r+1)+" estava num caminho sem saída. Tirei ele!","hint",3500);return}
+ for(let r=0;r<n;r++){if(m[r][sol[r]]!==2){m[r][sol[r]]=2;moves++;render();const e=$(`c${r}_${sol[r]}`);e.classList.add("hint");setTimeout(()=>e.classList.remove("hint"),2000);showMsg("💡 Na linha "+(r+1)+" o gato vai na coluna "+(sol[r]+1)+".","hint",3500);return}}};
+load(0);
+</script></body></html>

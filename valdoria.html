@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A Lenda de Valdoria</title>
+<style>
+:root{--bg:#f4efe6;--card:#fffaf0;--ink:#2a2118;--mut:#7a6a58;--acc:#8b3a1e;--hp:#c0392b;--mp:#2e6fb7;--bd:#d9ccb6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130f;--card:#241d16;--ink:#efe5d3;--mut:#a39682;--acc:#e0884f;--hp:#e5604f;--mp:#5aa0e8;--bd:#3d3326}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+body{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0 0 4px;color:var(--acc)}
+.sub{color:var(--mut);font-size:.9rem;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.act{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);margin-bottom:6px}
+.bar{height:9px;border-radius:5px;background:var(--bd);overflow:hidden;margin:3px 0 8px}
+.bar i{display:block;height:100%;transition:width .3s}
+.lbl{font-size:.85rem;display:flex;justify-content:space-between}
+.tag{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:10px;margin:2px 4px 0 0;border:1px solid}
+.ok{color:var(--mp)}.bad{color:var(--hp)}
+button{display:block;width:100%;text-align:left;font:inherit;padding:12px 14px;margin-top:8px;border-radius:10px;border:1px solid var(--acc);background:transparent;color:var(--ink);cursor:pointer}
+button:active{background:var(--acc);color:var(--bg)}
+button:disabled{opacity:.4}
+button small{display:block;color:var(--mut);font-size:.8rem}
+#log{max-height:130px;overflow-y:auto;font-size:.9rem;color:var(--mut);line-height:1.5;margin-top:6px}
+p{line-height:1.55;margin:0 0 8px}
+.art{font:14px/1.15 ui-monospace,Menlo,Consolas,monospace;margin:4px 0 8px;white-space:pre;overflow-x:auto;color:var(--ink)}
+</style>
+</head>
+<body>
+<h1>⚔️ A Lenda de Valdoria</h1>
+<div class="sub">Um RPG de texto em três atos</div>
+<div id="app"></div>
+<script>
+const C={
+ g:{n:"Guerreiro",e:"🛡️",hp:60,mp:6,atk:[8,14],sp:"Golpe Poderoso",cost:3,spd:[18,26],d:"Vida alta, golpes fortes"},
+ m:{n:"Mago",e:"🔮",hp:40,mp:14,atk:[5,9],sp:"Bola de Fogo",cost:4,spd:[20,32],d:"Muita magia, dano alto"},
+ a:{n:"Arqueiro",e:"🏹",hp:48,mp:8,atk:[7,12],sp:"Chuva de Flechas",cost:3,spd:[16,24],d:"Equilibrado e constante"},
+ c:{n:"Clérigo",e:"✝️",hp:52,mp:12,atk:[5,10],sp:"Luz Sagrada",cost:4,spd:[12,18],heal:12,d:"Causa dano e cura a si mesmo"},
+ l:{n:"Ladino",e:"🗡️",hp:44,mp:8,atk:[6,11],sp:"Golpe Furtivo",cost:3,spd:[14,28],d:"Golpes imprevisíveis"}
+};
+const X={
+ ben:{n:"Bênção",e:"✨",l:2,t:"+30% de dano"},
+ pele:{n:"Pele de Pedra",e:"🪨",l:2,t:"-30% de dano recebido"},
+ mente:{n:"Mente Clara",e:"🧠",l:2,t:"+2 de magia por turno"},
+ cor:{n:"Coragem",e:"🔥",l:1,t:"+20% de dano"},
+ fraq:{n:"Fraqueza",e:"💔",l:2,t:"-25% de dano",bad:1},
+ ven:{n:"Veneno",e:"☠️",l:1,t:"-3 de vida por turno",bad:1},
+ mal:{n:"Maldição",e:"🌑",l:2,t:"habilidades custam +1 de magia",bad:1}
+};
+const E={
+ ara:{n:"Aranha Gigante",e:"🕷️",hp:45,atk:[6,11],ef:"ven",drop:1},
+ esq:{n:"Esqueleto Guerreiro",e:"💀",hp:50,atk:[7,12]},
+ cac:{n:"Caçador de Recompensas",e:"🏹",hp:55,atk:[8,13],a:"band",drop:1},
+ bru:{n:"Bruxa do Pântano",e:"🧙",hp:60,atk:[7,13],ef:"mal",drop:1},
+ tro:{n:"Troll do Pântano",e:"🧌",hp:90,atk:[10,16],a:"orc",item:"cor3"},
+ vin:{n:"Bando de Vingança",e:"🗡️",hp:70,atk:[9,14],a:"band",drop:1},
+ cav:{n:"Cavaleiro Sombrio",e:"⚔️",hp:95,atk:[11,17],a:"gua",item:"arm3"},
+ ele:{n:"Elemental de Fogo",e:"🔥",hp:85,atk:[10,16],ef:"fraq",item:"am3"},
+ wyv:{n:"Wyvern",e:"🦎",hp:80,atk:[10,15],a:"dra",ef:"ven",item:"bot3"},
+ gob:{n:"Goblin Ladrão",e:"👺",hp:30,atk:[4,8],item:"bot1"},
+ lobo:{n:"Lobo Sombrio",e:"🐺",hp:38,atk:[5,10],item:"arm1"},
+ band:{n:"Chefe Bandido",e:"🥷",hp:50,atk:[6,11],item:"cor1"},
+ orc:{n:"Orc da Caverna",e:"👹",hp:55,atk:[7,12],drop:1,item:"am1"},
+ gua:{n:"Guardião de Pedra",e:"🗿",hp:70,atk:[8,13],drop:1,item:"cor2"},
+ dra:{n:"Dragão Ignis",e:"🐉",hp:160,atk:[12,20]}
+};
+const P=[
+ {t:"s",a:"Ato 1 · O Início",x:["Você sai da aldeia ao amanhecer. Na estrada, um goblin ladrão pula de trás de uma pedra e tenta roubar sua bolsa!"]},
+ {t:"f",k:"gob"},
+ {t:"q",ti:"O Ermitão",x:["Perto da estrada, um velho ermitão pede ajuda: o fogo da cabana dele quase apagou e ele está com frio."],o:[
+  {l:"Ajudar com lenha e conversar",out:{x:"O ermitão sorri e abençoa a sua jornada.",fx:["ben"]}},
+  {l:"Pegar as provisões dele escondido",out:{x:"Você leva uma poção, mas o ermitão percebe e lança uma maldição.",pot:1,fx:["mal"]}},
+  {l:"Seguir caminho",out:{x:"Você ignora o velho e segue em frente."}}]},
+ {t:"r",x:"Você encontra um canto seguro à beira da estrada para acampar."},
+ {t:"f",k:"lobo"},
+ {t:"s",a:"Ato 2 · A Estrada Sombria",x:["Entre os pertences do goblin havia um mapa: o dragão vive no Monte Cinzento. Dois caminhos levam até lá."]},
+ {t:"q",ti:"Dois Caminhos",x:["A floresta é longa, mas tem recursos. A trilha da montanha é rápida, porém perigosa."],o:[
+  {l:"🌲 Floresta Sombria",out:{x:"Você encontra uma poção escondida num tronco.",pot:1}},
+  {l:"⛰️ Trilha da Montanha",out:{x:"Pedras rolam e ferem você (-8 de vida), mas a pressa lhe dá coragem.",hp:-8,fx:["cor"]}}]},
+ {t:"q",ti:"O Mercador Viajante",x:["Um mercador com uma carroça cheia de quinquilharias acena para você na estrada."],o:[
+  {l:"Trocar 1 poção pelas Botas de Vento",out:{x:"Você entrega uma poção e recebe botas leves como o vento.",cost:1,item:"bot2"}},
+  {l:"Ouvir as dicas dele de batalha",out:{x:"As dicas do mercador deixam você mais afiado.",fx:["ben"]}},
+  {l:"Ignorar e seguir",out:{x:"Você acena e segue o seu caminho."}}]},
+ {t:"f",k:"band"},
+ {t:"q",ti:"A Fonte Misteriosa",x:["Numa clareira há uma fonte de água brilhante. Pode ser mágica... ou amaldiçoada."],o:[
+  {l:"Beber da fonte (arriscado)",out:[{x:"A água clareia a sua mente e renova a magia!",fx:["mente"],mp:4},{x:"A água estava envenenada!",fx:["ven"],hp:-5}]},
+  {l:"Encher o cantil com cuidado",out:{x:"Você bebe com calma e recupera algumas forças.",hp:10}}]},
+ {t:"q",ti:"O Baú Misterioso",x:["Meio escondido entre as raízes, há um baú antigo com a tranca enferrujada."],o:[
+  {l:"Abrir o baú",out:[{x:"Dentro havia uma lâmina rúnica brilhante!",item:"arm2"},{x:"Era um mímico! Ele morde você antes de fugir.",hp:-10,fx:["ven"]}]},
+  {l:"Deixar o baú em paz",out:{x:"Você prefere não arriscar e segue em frente."}}]},
+ {t:"r",x:"Uma clareira tranquila, longe da trilha, é ótima para descansar."},
+ {t:"f",k:"orc"},
+ {t:"s",a:"Ato 3 · A Caverna do Dragão",x:["O orc cai e a passagem se abre. O ar fica quente e o chão treme com uma respiração gigante vinda das profundezas."]},
+ {t:"q",ti:"O Altar Esquecido",x:["Num salão da caverna há um altar antigo coberto de ouro e velas apagadas."],o:[
+  {l:"Rezar diante do altar",out:{x:"Uma luz envolve você e a sua pele endurece como pedra.",fx:["pele"]}},
+  {l:"Quebrar o altar e saquear",out:[{x:"Entre os destroços você acha 2 poções!",pot:2},{x:"Uma maldição desce sobre você por profanar o altar!",fx:["fraq","mal"]}]}]},
+ {t:"q",ti:"A Curandeira da Caverna",x:["Uma velha curandeira vive escondida na caverna e oferece ajuda aos viajantes."],o:[
+  {l:"Aceitar o amuleto sagrado dela",out:{x:"Ela entrega um amuleto que pulsa com uma luz suave.",item:"am2"}},
+  {l:"Pedir um remédio",out:{x:"Ela cura os seus ferimentos e ainda lhe dá uma poção.",hp:30,pot:1}}]},
+ {t:"r",x:"Num nicho da caverna, as pedras ainda guardam um pouco de calor."},
+ {t:"f",k:"gua"},
+ {t:"r",x:"Diante da câmara do dragão há uma última fogueira antiga. Descanse bem: depois dela não há volta."},
+ {t:"f",k:"dra"},
+ {t:"w"}
+];
+const r=([a,b])=>a+Math.floor(Math.random()*(b-a+1));
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const has=i=>S.fx.some(f=>f.id==i);
+const addFx=i=>{S.fx=S.fx.filter(f=>f.id!=i);S.fx.push({id:i,left:X[i].l})};
+const A={
+g:String.raw`   ,---.   
+  ( @@ )   
+   '---'   
+ |=|#||#|=-+
+ |=|#||#|   
+   /  \ 
+  /_  _\ `,
+m:String.raw`    /\ 
+   /  \ 
+  [----]  
+  ( @@ )  *
+   \--/ .* 
+  /|  |\ *.
+   |  |    `,
+a:String.raw`   ,---.   
+  ( @@ )  )
+   '---' )\ 
+  /|##|\-+|
+   |##|  )/
+   /  \ 
+  /_  _\ `,
+c:String.raw`    _+_    
+   ( @@ )  
+    '--'   
+  .-|##|-. 
+ (  |##|  )
+    /  \ 
+   /_  _\ `,
+l:String.raw`   .---.   
+  /(@@ )\ 
+   '---'   
+  \|==|/-- 
+   |  |    
+   /  \ 
+  _/  \_   `
+};
+const B={
+gob:String.raw` \|      |/ 
+  ( @@  )   
+  /|====|\ 
+   |    |   
+  _/    \_  `,
+lobo:String.raw`  /|    /|   
+ ( @@ )=====~
+  \_ ___/    
+  /|/  |\ 
+  ''    ''   `,
+band:String.raw`   .-====-.   
+  (  @@    )  
+   \------/ / 
+   /|XXXX|\/  
+    |    |    
+   _/    \_   `,
+orc:String.raw`   ,^^^^,     
+  ( @@   )    
+   )vvvv(     
+  /|####|\  ! 
+   |####|     
+   /_  _\ `,
+gua:String.raw`   [=====]    
+   [ @@  ]    
+  [|[===]|]   
+   |[   ]|    
+   [_]  [_]   `,
+dra:String.raw`   /\    /\     
+  /  \__/  \__  
+ (  @@    ,__\> 
+  \___,--.__/   
+   /|/|/|/|     
+  ^^ ^^ ^^ ^^   `,
+fire:String.raw`   )   (   
+  (  ) )   
+ ( )(  (    
+ ,\_____/, `,
+quest:String.raw`  .--------.  
+  | ?  ??  |  
+  |  ??  ? |  
+  '--------'  `,
+arma:String.raw`    ^    
+   / \ 
+   | |   
+  -+-+-  
+    I    `,
+armadura:String.raw`  /'-'\ 
+ |  _  | 
+ | | | | 
+  \___/  `,
+botas:String.raw`  __  __ 
+ |  ||  |
+ |__||__|`,
+amuleto:String.raw`   .-.   
+  ( * )  
+   '-'   `,
+ara:String.raw`  \ \    / /  
+ --\(@@)/--  
+  /|    |\ 
+  /_    _\ `,
+esq:String.raw`   .---.   
+  ( @@ )   
+   |===|   
+  _|XXX|_  
+   |   |   
+  /_| |_\ `,
+bru:String.raw`    /\    
+   /__\   
+  ( @@ )   
+ ~/|vvv|\~ 
+   /   \  
+  /_____\ `,
+ele:String.raw`   )  (  )  
+  ( )@@( )  
+  (  ^^  )  
+   )(__)(   
+  ~~~~~~~~  `,
+crystal:String.raw`     /\    
+    /  \ 
+    \  /   
+     \/    `
+};
+const I={
+bot1:{n:"Botas Ágeis",s:"botas",v:1,d:"+1 de magia por turno"},
+bot2:{n:"Botas de Vento",s:"botas",v:2,d:"+2 de magia por turno"},
+arm1:{n:"Lâmina de Prata",s:"arma",v:3,d:"+3 de dano"},
+arm2:{n:"Lâmina Rúnica",s:"arma",v:6,d:"+6 de dano"},
+cor1:{n:"Couro Reforçado",s:"armadura",v:2,d:"-2 de dano recebido"},
+cor2:{n:"Cota de Pedra",s:"armadura",v:4,d:"-4 de dano recebido"},
+am1:{n:"Amuleto de Vida",s:"amuleto",v:10,d:"+10 de vida máxima"},
+am2:{n:"Amuleto Sagrado",s:"amuleto",v:20,d:"+20 de vida máxima"},
+arm3:{n:"Espada Flamejante",s:"arma",v:9,d:"+9 de dano"},
+cor3:{n:"Armadura de Escamas",s:"armadura",v:6,d:"-6 de dano recebido"},
+bot3:{n:"Botas do Vendaval",s:"botas",v:3,d:"+3 de magia por turno"},
+am3:{n:"Amuleto do Dragão",s:"amuleto",v:30,d:"+30 de vida máxima"}
+};
+const bn=s=>S.eq[s]?I[S.eq[s]].v:0;
+function giveItem(id){
+ const it=I[id],cur=S.eq[it.s];
+ if(cur&&I[cur].v>=it.v)return `Você já tem ${I[cur].n}, que é melhor.`;
+ if(it.s=="amuleto"){const g=it.v-(cur?I[cur].v:0);S.mhp+=g;S.hp+=g}
+ S.eq[it.s]=id;
+ return `Equipou: ${it.n} (${it.d})`;
+}
+const BGP=[
+[String.raw`   .   \|/     .      *     .   `,String.raw`  ^    ^^   `,String.raw` /|\  /||\  `,String.raw`  |    ||    `,`.,'.,.'.,.,'`],
+[String.raw`  .--.   .      .-~-.       .   `,String.raw`    /\      `,String.raw`   /  \  /\ `,String.raw` /    \/  \ `,String.raw`__/______\__`],
+[`   ~    ~   ~     ~    ~    ~  `,`V  v   V  v `,`v   .    v  `,`  .   ,   . `,`_o_,__._o__,`]
+];
+function inv(back){
+ const col=s=>{const id=S.eq[s],ic=(id?B[s]:"\n\n  vazio\n\n").split("\n");while(ic.length<5)ic.push("");return ["[ "+s.toUpperCase()+" ]"].concat(ic.map(l=>" "+l),[id?I[id].n:"-"]).map(l=>l.padEnd(18))};
+ const a=col("arma"),b=col("armadura"),c=col("botas"),d=col("amuleto");
+ const t=a.map((l,i)=>l+b[i]).concat([""],c.map((l,i)=>l+d[i])).join("\n");
+ app.innerHTML=`<div class="card"><div class="act">Equipamento</div><pre class="art">${t}</pre>${Object.keys(S.eq).map(s=>`<p>${s}: ${S.eq[s]?I[S.eq[s]].n+" · "+I[S.eq[s]].d:"vazio"}</p>`).join("")}</div><button id="v">Voltar</button>`;
+ document.getElementById("v").onclick=back;
+}
+function loot(e){
+ S.fx=S.fx.map(f=>({...f,left:f.left-1})).filter(f=>f.left>0);
+ if(e.drop)S.pot++;
+ if(!e.item)return go();
+ const it=I[e.item];
+ story("Saque",[`${e.n} deixou algo para trás: <b>${it.n}</b>!`,giveItem(e.item)].concat(e.drop?["Você também achou uma poção. 🧪"]:[]),[["Continuar",go]],{e:it.s,h:"^^"});
+}
+const BG2=[
+[String.raw`   .   \|/     .      *     .   `,`  ^^   ^  ^ `,`  ^    ^^   `,String.raw` /|\  /||\  `,`  ||   |  || `,`.,'.,.'.,.,'`,`;:,.;:.,;:.,`],
+[String.raw`  .--.   .      .-~-.       .   `,String.raw`__/\__/\__  `,String.raw` /\  /\  /\ `,`|__| |__| |_`,`  |   |   | `,`.,'.,.'.,.,'`,`_.-._.-._.-.`],
+[`  ~   . ~     o      ~    .   ~  `,`~  ~   ~ ~  `,`  Y    Y  y  `,String.raw`\|/ \|/ \|/ `,`  ||   ||   `,`~-~_~-~_~-~_`,`_.~_.~_.~_.~`],
+[`  .    *      .   (  )     *   .  `,String.raw`_/\_/\_/\_/ `,`[]_[]_[]_[]_`,`|##|  |##|  `,`|##|__|##|__`,`=#=#=#=#=#=#`,`#_#_#_#_#_#_`],
+[`   v    v   v     v    v    v  `,`V  v   V  v `,`v   .    v  `,`  .   ,   . `,`  |  .  |  .`,`_o_,__._o__,`,`#.#,#.#,#.#,`],
+[`  ^  ^   )   (   ^  ^   )   (    `,`~^~^~^~^~^~^`,`  )  (  )  ( `,` (  ) (  ) (  `,`  ^^  ^^  ^^ `,`_@_o_$_o_@_o`,`#%#%#%#%#%#%`]
+];
+const s_=(a,b,...x)=>({t:"s",a,b,x}),f_=(k,o)=>({t:"f",k,...o}),r_=x=>({t:"r",x}),q_=(ti,x,...o)=>({t:"q",ti,x:[x],o}),o_=(l,out)=>({l,out}),y_=(s,...y)=>({...s,y});
+const Q=[
+s_("Ato 1 · A Estrada",0,"Você sai da aldeia ao amanhecer. Na estrada, um goblin ladrão pula de trás de uma pedra e tenta roubar a sua bolsa!"),
+f_("gob"),
+q_("O Ermitão","Perto da estrada, um velho ermitão pede ajuda: o fogo da cabana dele quase apagou.",
+ o_("Ajudar com lenha e conversar",{x:"O ermitão sorri e abençoa a sua jornada.",fx:["ben"],fl:["erm"],k:1}),
+ o_("Pegar as provisões dele escondido",{x:"Você leva uma poção e rações, mas o ermitão percebe e lança uma maldição.",pot:1,sup:2,fx:["mal"],fl:["lad"],k:-1}),
+ o_("Seguir caminho",{x:"Você ignora o velho e segue em frente."})),
+r_("Você encontra um canto seguro à beira da estrada."),
+f_("lobo"),
+q_("O Filhote","Ao lado do lobo caído, um filhote assustado olha para você.",
+ o_("Cuidar do filhote",{x:"O filhote lambe a sua mão e passa a segui-lo de longe.",fl:["filhote"],k:1,sup:1}),
+ o_("Seguir sem olhar para trás",{x:"Você segue em frente e o uivo do filhote ecoa atrás de você."})),
+y_(s_("A Perseguição",0,"O ermitão contratou um caçador de recompensas, que alcança você na estrada!"),"lad"),
+f_("cac",{y:["lad"]}),
+s_("Ato 2 · A Vila de Pedrasul",1,"Você chega a Pedrasul, vila queimada pelo dragão. Os moradores contam que bandidos dominam a ponte e cobram pedágio."),
+q_("O Pedágio","O chefe bandido exige tudo o que você tem para atravessar a ponte.",
+ o_("Pagar 1 poção",{x:"Você paga e atravessa. Os aldeões ficam decepcionados.",cost:1,fl:["pagou"],k:-1}),
+ o_("Lutar pela ponte",{x:"Você enfrenta o chefe bandido para libertar a vila.",fl:["lutou"],k:1})),
+f_("band",{y:["lutou"]}),
+y_(q_("O Chefe Caído","Ferido, o chefe bandido implora por misericórdia.",
+ o_("Poupar o bandido",{x:"Ele jura lealdade e promete ajudar quando você mais precisar.",fl:["band_p"],k:1}),
+ o_("Saquear o bandido",{x:"Você pega as poções e as rações dele e o deixa para trás.",pot:1,sup:1,fl:["vinganca"],k:-1})),"lutou"),
+q_("O Ferreiro","O ferreiro de Pedrasul perdeu quase tudo no incêndio, mas ainda tem a forja.",
+ o_("Ajudar a reconstruir a forja",{x:"Em agradecimento, ele entrega um couro reforçado.",item:"cor1",k:1}),
+ o_("Pagar 1 poção por um couro reforçado",{x:"O ferreiro faz um bom negócio com você.",cost:1,item:"cor1"}),
+ o_("Seguir adiante",{x:"Você deixa a vila para trás."})),
+r_("Uma casa abandonada de Pedrasul serve de abrigo."),
+f_("esq"),
+q_("A Fonte Misteriosa","Num cemitério há uma fonte de água brilhante. Pode ser mágica... ou amaldiçoada.",
+ o_("Beber da fonte (arriscado)",{out:[{x:"A água clareia a sua mente!",fx:["mente"],mp:4},{x:"A água estava envenenada!",fx:["ven"],hp:-5}]}.out),
+ o_("Encher o cantil com cuidado",{x:"Você se refresca e recupera algumas forças.",hp:10})),
+f_("orc"),
+r_("Uma clareira tranquila, longe da trilha, é ótima para descansar."),
+f_("ara"),
+s_("Ato 3 · O Pântano Negro",2,"Além da vila, a névoa cobre um pântano escuro. Dizem que uma bruxa e um troll dominam esse lugar."),
+q_("Os Aldeões Presos","Diante da cabana da bruxa, aldeões estão presos em gaiolas.",
+ o_("Libertar os aldeões",{x:"Eles fogem agradecidos e deixam rações para você.",sup:2,fl:["aldeoes"],k:1}),
+ o_("Roubar as oferendas da bruxa",{x:"Você leva 2 poções e deixa os aldeões para trás.",pot:2,k:-1})),
+f_("bru"),
+q_("O Baú Misterioso","Entre as raízes, há um baú antigo com a tranca enferrujada.",
+ o_("Abrir o baú",[{x:"Dentro havia uma lâmina rúnica brilhante!",item:"arm2"},{x:"Era um mímico! Ele morde você antes de fugir.",hp:-10,fx:["ven"]}]),
+ o_("Deixar o baú em paz",{x:"Você prefere não arriscar."})),
+r_("Uma ilha seca no meio do pântano serve de acampamento."),
+f_("tro"),
+y_(s_("A Vingança",2,"Os homens do chefe bandido que você saqueou surgem da névoa!"),"vinganca"),
+f_("vin",{y:["vinganca"]}),
+y_(q_("O Ermitão Retorna","O velho ermitão aparece no pântano com uma tigela de sopa quente.",
+ o_("Aceitar a ajuda dele",{x:"O ermitão cura as suas feridas e deixa rações.",hp:30,sup:2,fx:["pele"]})),"erm"),
+r_("Você descansa antes de deixar o pântano."),
+s_("Ato 4 · A Fortaleza Sombria",3,"No alto de uma colina, a fortaleza do Cavaleiro Sombrio guarda o caminho até o Monte Cinzento."),
+q_("O Prisioneiro","Numa cela, uma elfa pede para ser libertada.",
+ o_("Libertar a elfa",{x:"Ela canta uma bênção de gratidão.",fx:["ben","mente"],fl:["elfa"],k:1}),
+ o_("Ignorar o pedido",{x:"Você passa sem olhar. A voz dela some atrás de você."})),
+f_("cav"),
+q_("O Mercador Sombrio","Um mercador encapuzado vende suprimentos nos portões da fortaleza.",
+ o_("Trocar 1 poção pelas Botas de Vento",{x:"Você entrega uma poção e recebe botas leves como o vento.",cost:1,item:"bot2"}),
+ o_("Ouvir as dicas dele",{x:"As dicas do mercador deixam você mais afiado.",fx:["ben"]}),
+ o_("Ignorar e seguir",{x:"Você segue o seu caminho."})),
+r_("Um depósito esquecido da fortaleza serve de abrigo."),
+f_("ele"),
+q_("O Santuário","Entre as ruínas há um santuário com uma velha curandeira.",
+ o_("Aceitar o amuleto sagrado",{x:"Ela entrega um amuleto que pulsa com uma luz suave.",item:"am2"}),
+ o_("Pedir um remédio",{x:"Ela cura os seus ferimentos e ainda lhe dá uma poção.",hp:30,pot:1})),
+y_(q_("O Aliado Chegou","O ex-chefe bandido que você poupou aparece com um grupo de homens leais.",
+ o_("Aceitar a ajuda dele",{x:"Eles distraem os guardas e deixam suprimentos para você.",pot:2,sup:2,fx:["ben"]})),"band_p"),
+y_(q_("O Lobo Crescido","O filhote que você criou agora é um lobo enorme e ruge ao seu lado.",
+ o_("Seguir com o lobo",{x:"A coragem queima no seu peito.",fx:["cor","ben"]})),"filhote"),
+r_("Você descansa antes de subir o Monte Cinzento."),
+s_("Ato 5 · A Caverna do Dragão",4,"A montanha treme. Da boca da caverna sai um ar quente e o cheiro de enxofre."),
+q_("O Altar Esquecido","Num salão da caverna há um altar antigo coberto de ouro e velas apagadas.",
+ o_("Rezar diante do altar",{x:"Uma luz envolve você e a sua pele endurece como pedra.",fx:["pele"],k:1}),
+ o_("Quebrar o altar e saquear",[{x:"Entre os destroços você acha 2 poções!",pot:2,k:-1},{x:"Uma maldição desce sobre você por profanar o altar!",fx:["fraq","mal"],k:-1}])),
+r_("Num nicho da caverna, as pedras ainda guardam um pouco de calor."),
+f_("gua"),
+f_("wyv"),
+r_("Diante do covil há uma última fogueira antiga. Depois dela não há volta."),
+s_("O Covil de Ignis",5,"O Dragão Ignis dorme sobre uma montanha de ouro. O Cristal do Sol brilha ao lado dele e chama você."),
+q_("A Última Escolha","Você sente o poder do cristal sussurrando na sua mente.",
+ o_("Prometer proteger o cristal sem usar o poder dele",{x:"A luz do cristal fortalece o seu coração.",fx:["pele","ben"],k:2}),
+ o_("Absorver um pouco do poder do cristal",{x:"O poder sombrio queima as suas veias: forte, mas perigoso.",fx:["ben","cor"],hp:-15,k:-2,fl:["sombrio"]})),
+r_("Você respira fundo e se prepara. O dragão acorda."),
+f_("dra"),
+{t:"w"}
+];
+function end(){
+ const f=S.fl,t=["O Dragão Ignis solta um último rugido e desaba. O Cristal do Sol volta a brilhar sobre Valdoria."];
+ if(f.band_p)t.push("O ex-bandido que você poupou ajuda a carregar o cristal de volta.");
+ if(f.elfa)t.push("A elfa que você libertou canta uma bênção que cura as terras queimadas.");
+ if(f.aldeoes)t.push("Os aldeões do pântano preparam um banquete em sua honra.");
+ if(f.filhote)t.push("O lobo que você criou uiva de alegria ao seu lado.");
+ t.push(f.sombrio?"Mas o poder sombrio do cristal ainda arde em você e Valdoria teme o herói que a salvou. 🌑":S.k>=3?"Por todas as suas escolhas justas, você é coroado Protetor de Valdoria. 👑":S.k>=0?"Valdoria está salva e você é celebrado como herói. 🎉":"O reino foi salvo, mas as suas ações cruéis deixam o povo com medo de você.");
+ story("Final",t,[["🔁 Jogar de novo",start]],{e:"crystal",h:"^^",g:" * * "});
+}
+function scene(o){
+ o=o||{};
+ const hl=A[S.c].split("\n").map(l=>l.replace("@@",o.h||"oo").padEnd(12));
+ const el=o.e&&B[o.e]?B[o.e].split("\n").map(l=>l.replace("@@",o.f||"oo")):[];
+ while(el.length<7)el.unshift("");
+ const g=(o.g||"").padEnd(5).slice(0,5);
+ const p=BG2[S.b||0],R=l=>l.repeat(3);
+ return [p[0],...p.slice(1,5).map(R),hl.map((l,i)=>l+(i==3?g:"     ")+el[i]).join("\n"),...p.slice(5).map(R)].join("\n").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+}
+let S={},app=document.getElementById("app");
+function h(){const c=C[S.c];return`<div class="lbl"><span>${c.e} ${c.n}</span><span>🧪 ${S.pot} · 🍖 ${S.sup}</span></div><div class="lbl"><span>❤️ Vida</span><span>${S.hp}/${S.mhp}</span></div><div class="bar"><i style="width:${S.hp/S.mhp*100}%;background:var(--hp)"></i></div><div class="lbl"><span>🔷 Magia</span><span>${S.mp}/${c.mp}</span></div><div class="bar"><i style="width:${S.mp/c.mp*100}%;background:var(--mp)"></i></div>${S.fx.map(f=>`<span class="tag ${X[f.id].bad?"bad":"ok"}">${X[f.id].e} ${X[f.id].n}: ${X[f.id].t} (${f.left}x)</span>`).join("")}`}
+function story(act,txt,btns,o){
+ app.innerHTML=`${S.c?`<div class="card"><pre class="art">${scene(o)}</pre></div>`:""}<div class="card"><div class="act">${act}</div>${txt.map(t=>`<p>${t}</p>`).join("")}</div>${S.c?`<div class="card">${h()}</div>`:""}`+btns.map((b,i)=>`<button data-i="${i}">${b[0]}</button>`).join("");
+ app.querySelectorAll("button").forEach(el=>el.onclick=()=>btns[el.dataset.i][1]());
+}
+function start(){
+ S={};
+ story("Início",["Há muito tempo, o Dragão Ignis queimou as plantações de Valdoria e roubou o Cristal do Sol, que mantinha o reino em paz.","O prefeito da aldeia chama você: “Só um herói pode recuperar o cristal. Quem é você?”"],
+  Object.keys(C).map(k=>[`${C[k].e} <b>${C[k].n}</b> <small>${C[k].d} · ${C[k].hp} de vida, ${C[k].mp} de magia</small>`,()=>pick(k)]));
+}
+function pick(c){S={c,hp:C[c].hp,mhp:C[c].hp,mp:C[c].mp,pot:2,fx:[],i:0,eq:{},fl:{},k:0,sup:4};go()}
+function go(){let s;do{s=Q[S.i++]}while((s.y&&!s.y.every(f=>S.fl[f]))||(s.n&&s.n.some(f=>S.fl[f])));({s:sc,f:(s)=>fight(s.k),q:qu,r:re,w:end})[s.t](s)}
+function sc(s){S.b=s.b;story(s.a,s.x,[["Continuar",go]])}
+function qu(s){story("Missão secundária · "+s.ti,s.x,s.o.map(o=>[o.l,()=>qres(o)]),{e:"quest"})}
+function qres(o){
+ const u=Array.isArray(o.out)?o.out[Math.random()<.5?0:1]:o.out;
+ if(u.cost&&S.pot<u.cost)return story("Missão secundária",["Você não tem poções suficientes para isso."],[["Continuar",go]],{e:"quest"});S.pot-=u.cost||0;(u.fl||[]).forEach(f=>S.fl[f]=1);S.k+=u.k||0;S.sup+=u.sup||0;const it=u.item?giveItem(u.item):"";S.hp=cl(S.hp+(u.hp||0),1,S.mhp);S.mp=cl(S.mp+(u.mp||0),0,C[S.c].mp);S.pot+=u.pot||0;
+ (u.fx||[]).forEach(addFx);
+ const g=(u.fx||[]).map(i=>`${X[i].bad?"Debuff":"Buff"}: ${X[i].e} ${X[i].n} (${X[i].t}, ${X[i].l} batalhas)`);
+ if(it)g.push(it);if(u.pot)g.push(`+${u.pot} poção`);
+ story("Missão secundária",[u.x].concat(g.length?["<b>"+g.join(" · ")+"</b>"]:[]),[["Continuar",go]],{e:u.item?I[u.item].s:"quest",h:(u.fx||[]).some(i=>X[i].bad)?"><":"^^"});
+}
+function re(s){
+ story("Acampamento",[s.x,"Aqui você pode se recuperar antes da próxima batalha."],[
+  ["🏕️ Descansar <small>Gasta 1 ração e recupera tudo; sem rações, recupera só metade</small>",()=>{const f=S.sup>0?1:.5;if(S.sup>0)S.sup--;S.hp=Math.round(S.hp+(S.mhp-S.hp)*f);S.mp=Math.round(S.mp+(C[S.c].mp-S.mp)*f);S.fx=S.fx.filter(f=>f.id!="ven");story("Acampamento",["Você dorme e recupera as forças (rações restantes: "+S.sup+")."],[["Continuar",go]],{e:"fire",h:"^^"})}],
+  ["🔥 Seguir direto <small>Não recupera nada, mas ganha Coragem (+20% de dano) na próxima batalha</small>",()=>{addFx("cor");go()}],
+  ["🎒 Ver equipamento",()=>inv(()=>re(s))]
+ ],{e:"fire"});
+}
+function fight(k){S.e={...E[k]};S.e.hp=S.e.mhp=Math.round(E[k].hp*(1.1+S.i*.01));S.log=["Um "+S.e.n+" aparece!"];S.pose={e:E[k].a||k};S.busy=false;turn()}
+function turn(){
+ const e=S.e,c=C[S.c],over=e.hp<=0,cost=c.cost+(has("mal")?1:0);
+ app.innerHTML=`<div class="card"><div class="act">Combate</div><pre class="art">${scene(S.pose)}</pre><div class="lbl"><span>${e.e} ${e.n}</span><span>❤️ ${Math.max(0,e.hp)}/${e.mhp}</span></div><div class="bar"><i style="width:${Math.max(0,e.hp)/e.mhp*100}%;background:var(--hp)"></i></div>${h()}<div id="log">${S.log.slice(-4).map(l=>`<div>${l}</div>`).join("")}</div></div>`+
+ (over?`<button id="n">Continuar</button>`:`<button id="a" ${S.busy?"disabled":""}>⚔️ Ataque básico</button><button id="s" ${S.mp<cost||S.busy?"disabled":""}>✨ ${c.sp} <small>Custa ${cost} de magia${c.heal?" · também cura "+c.heal:""}</small></button><button id="m" ${S.busy?"disabled":""}>🧘 Meditar <small>Recupera 4 de magia, mas perde o turno</small></button><button id="p" ${S.pot<1||S.busy?"disabled":""}>🧪 Usar poção <small>+25 de vida</small></button>`);
+ const b=id=>document.getElementById(id);
+ if(over){b("n").onclick=()=>{loot(e)};return}
+ b("a").onclick=()=>act("a");b("s").onclick=()=>act("s");b("m").onclick=()=>act("m");b("p").onclick=()=>act("p");
+}
+function act(t){
+ const e=S.e,c=C[S.c],M=C[S.c].mp;
+ const dm=Math.max(.1,1+(has("ben")?.3:0)+(has("cor")?.2:0)-(has("fraq")?.25:0));
+ let d;
+ if(t=="a"){d=Math.round(r(c.atk)*dm)+bn("arma");e.hp-=d;S.log.push(`Você ataca e causa ${d} de dano.`);S.pose={e:S.pose.e,h:">>",f:"><",g:"=--->"}}
+ if(t=="s"){S.mp-=c.cost+(has("mal")?1:0);d=Math.round(r(c.spd)*dm)+bn("arma");e.hp-=d;S.log.push(`${c.sp}! Você causa ${d} de dano.`);S.pose={e:S.pose.e,h:">>",f:"><",g:"*~*~>"};if(c.heal){S.hp=Math.min(S.mhp,S.hp+c.heal);S.log.push(`Você recupera ${c.heal} de vida.`)}}
+ if(t=="m"){S.mp=Math.min(M,S.mp+4);S.log.push("Você respira fundo e recupera magia.");S.pose={e:S.pose.e,h:"^^",f:"oo",g:"~*~*~"}}
+ if(t=="p"){S.pot--;S.hp=Math.min(S.mhp,S.hp+25);S.log.push("Você bebe a poção e recupera vida.");S.pose={e:S.pose.e,h:"^^",f:"oo",g:"+ + +"}}
+ if(e.hp<=0){S.log.push(`${e.n} foi derrotado!`);S.pose={e:S.pose.e,h:"^^",f:"xx",g:""};turn();return}
+ S.busy=true;turn();setTimeout(()=>{d=Math.max(1,Math.round(r(e.atk)*(1+S.i*.006)*(has("pele")?.7:1))-bn("armadura"));S.hp-=d;S.log.push(`${e.n} ataca e causa ${d} de dano.`);if(e.ef&&Math.random()<.3){addFx(e.ef);S.log.push(`${X[e.ef].e} Você sofreu: ${X[e.ef].n}!`)}
+ if(has("ven")&&S.hp>0){S.hp=Math.max(1,S.hp-3);S.log.push("☠️ O veneno causa 3 de dano.")}
+ S.busy=false;if(S.hp<=0){S.pose={e:S.pose.e,h:"xx",f:"OO",g:"<~~~~"};lose();return}
+ S.mp=Math.min(M,S.mp+1+bn("botas")+(has("mente")?2:0));
+ S.pose={e:S.pose.e,h:"><",f:"OO",g:"<~~~~"};turn()},650);
+}
+function lose(){story("Fim de jogo",["Suas forças acabaram e a escuridão toma conta de tudo. Valdoria continua sem esperança…"],[["🔁 Tentar de novo",start]],{e:S.pose&&S.pose.e,f:"OO",h:"xx",g:"<~~~~"})}
+function win(){story("Final",["O Dragão Ignis solta um último rugido e desaba. Você pega o Cristal do Sol e ele ilumina toda a caverna.","De volta à aldeia, as plantações voltam a crescer. Todos cantam o nome do "+C[S.c].n+" que salvou Valdoria. 🎉"],[["🔁 Jogar de novo",start]],{e:"crystal",h:"^^",g:" * * "})}
+start();
+</script>
+</body>
+</html>

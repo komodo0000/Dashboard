@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meus testes</title>
+<style>
+  :root{--fundo:#f1f4ef;--cartao:#fff;--tinta:#16211c;--suave:#5d6b63;--linha:#d3dad4;--acento:#1f6f54}
+  @media (prefers-color-scheme:dark){:root{--fundo:#0f1613;--cartao:#18221d;--tinta:#e6ece8;--suave:#9aaba1;--linha:#2a3a32;--acento:#5fc79b}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--tinta);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;line-height:1.45}
+  main{max-width:560px;margin:0 auto;padding:28px 16px 56px}
+  h1{font-size:1.7rem;margin:0 0 4px}
+  p{color:var(--suave);margin:0 0 20px}
+  a.cartao{display:block;background:var(--cartao);border:1px solid var(--linha);border-radius:12px;padding:16px;margin-bottom:12px;text-decoration:none;color:inherit}
+  a.cartao:hover{border-color:var(--acento)}
+  a.cartao b{display:block;font-size:1.1rem;color:var(--acento)}
+  a.cartao span{color:var(--suave);font-size:.92rem}
+  a:focus-visible{outline:3px solid #f2b705;outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Meus testes</h1>
+  <p>Escolha um projeto para abrir.</p>
+  <a class="cartao" href="valdoria.html"><b>A Lenda de Valdoria</b><span>RPG de texto com classes, itens e missões.</span></a>
+  <a class="cartao" href="cortefacil.html"><b>CorteFacil</b><span>Agendamento da barbearia, com ganhos e estoque.</span></a>
+  <a class="cartao" href="gatos.html"><b>Gatos por Cor</b><span>Página de teste sobre gatos e suas cores.</span></a>
+</main>
+</body>
+</html>
